@@ -32,11 +32,9 @@
         </div>
     </div>
     <script type="module">
-        // Import Firebase Modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
         import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyApii_8IkZ0KTPtR4HuOnWW8CaPQg2Dhbw",
             authDomain: "esp32-demo-39b57.firebaseapp.com",
@@ -48,15 +46,11 @@
             measurementId: "G-43764EV3WN"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Chart.js data structures
-        const chartData = {};
         const charts = [];
 
-        // Listen for changes in Firebase Realtime Database
         function fetchDataRealtime() {
             const dbRef = ref(database, "/");
 
@@ -64,15 +58,12 @@
                 if (snapshot.exists()) {
                     const data = snapshot.val();
 
-                    // Process Node data for charts
                     ["Node1", "Node2", "Node3", "Node4"].forEach((node, index) => {
                         const nodeData = data[node];
                         const times = Object.keys(nodeData).map((key) => new Date(parseInt(key) * 1000));
                         const humid = Object.values(nodeData).map((entry) => entry.humid);
                         const temp = Object.values(nodeData).map((entry) => entry.temp);
                         const somo = Object.values(nodeData).map((entry) => entry.somo);
-
-                        chartData[node] = { times, humid, temp, somo };
 
                         if (charts[index]) {
                             charts[index].data.labels = times;
@@ -84,15 +75,12 @@
                             createChart(index + 1, times, humid, temp, somo);
                         }
                     });
-                } else {
-                    console.error("No data available in Firebase!");
                 }
             }, (error) => {
                 console.error("Error fetching data:", error);
             });
         }
 
-        // Create a Chart.js chart
         function createChart(chartId, labels, humid, temp, somo) {
             const ctx = document.getElementById(`chart${chartId}`).getContext("2d");
             charts[chartId - 1] = new Chart(ctx, {
@@ -110,20 +98,15 @@
                     plugins: { legend: { display: true } },
                     scales: {
                         x: {
-                            type: "time", // Use time-based axis
-                            time: {
-                                unit: "minute" // Display time in minutes
-                            }
+                            type: "time",
+                            time: { unit: "minute" }
                         },
-                        y: {
-                            beginAtZero: true
-                        }
+                        y: { beginAtZero: true }
                     },
                 },
             });
         }
 
-        // Control pump
         function togglePump() {
             const button = document.getElementById("pumpButton");
             const isOn = button.classList.toggle("on");
@@ -132,19 +115,15 @@
             update(ref(database, "/pump"), { pump_event: isOn ? 1 : 0 });
         }
 
-        // Set flow rate
         function setFlow(value) {
             document.getElementById("flowValue").textContent = value;
             update(ref(database, "/pump"), { flow: parseInt(value) });
         }
 
-        // Gắn các hàm vào phạm vi toàn cục (global scope)
         window.togglePump = togglePump;
         window.setFlow = setFlow;
 
-        // Initialize the application
-        fetchDataRealtime(); // Start listening for changes in real-time
-
+        fetchDataRealtime();
     </script>
 </body>
 </html>
