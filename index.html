@@ -12,9 +12,9 @@
     <div class="container">
         <h1>Realtime Firebase Dashboard</h1>
         <div class="controls">
-            <button id="pumpButton" class="off" onclick="togglePump()">OFF</button>
-            <input id="flowSlider" type="range" min="0" max="255" value="50" onmouseup="setFlow(this.value)">
-            <span id="flowValue">50</span>
+            <button id="pumpButton" class="off" onclick="togglePump()"></button>
+            <input id="flowSlider" type="range" min="0" max="255" value="0" onmouseup="setFlow(this.value)">
+            <span id="flowValue"></span>
         </div>
         <div id="charts">
             <div class="chart-container">
@@ -51,6 +51,42 @@
 
         const charts = [];
 
+        function fetchInitialValues() {
+            const pumpRef = ref(database, "/pump");
+
+            onValue(pumpRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const pumpData = snapshot.val();
+
+                    // Lấy giá trị `flow` từ Firebase và gán vào thanh trượt và nhãn
+                    if (pumpData.flow !== undefined) {
+                        const flowSlider = document.getElementById("flowSlider");
+                        const flowValue = document.getElementById("flowValue");
+
+                        flowSlider.value = pumpData.flow;
+                        flowValue.textContent = pumpData.flow;
+                    }
+
+                    // Lấy trạng thái `pump_event` và cập nhật nút bấm
+                    if (pumpData.pump_event !== undefined) {
+                        const pumpButton = document.getElementById("pumpButton");
+
+                        if (pumpData.pump_event === 1) {
+                            pumpButton.classList.add("on");
+                            pumpButton.classList.remove("off");
+                            pumpButton.textContent = "ON";
+                        } else {
+                            pumpButton.classList.add("off");
+                            pumpButton.classList.remove("on");
+                            pumpButton.textContent = "OFF";
+                        }
+                    }
+                }
+            }, (error) => {
+                console.error("Error fetching initial values:", error);
+            });
+        }
+
         function fetchDataRealtime() {
             const dbRef = ref(database, "/");
 
@@ -60,10 +96,14 @@
 
                     ["Node1", "Node2", "Node3", "Node4"].forEach((node, index) => {
                         const nodeData = data[node];
-                        const times = Object.keys(nodeData).map((key) => new Date(parseInt(key) * 1000));
-                        const humid = Object.values(nodeData).map((entry) => entry.humid);
-                        const temp = Object.values(nodeData).map((entry) => entry.temp);
-                        const somo = Object.values(nodeData).map((entry) => entry.somo);
+                        const timestamps = Object.keys(nodeData)
+                            .sort((a, b) => a - b) // Sắp xếp key theo thứ tự tăng dần
+                            .slice(-20); // Lấy 20 phần tử cuối cùng
+
+                        const times = timestamps.map((key) => new Date(parseInt(key) * 1000));
+                        const humid = timestamps.map((key) => nodeData[key].humid);
+                        const temp = timestamps.map((key) => nodeData[key].temp);
+                        const somo = timestamps.map((key) => nodeData[key].somo);
 
                         if (charts[index]) {
                             charts[index].data.labels = times;
@@ -80,6 +120,7 @@
                 console.error("Error fetching data:", error);
             });
         }
+
 
         function createChart(chartId, labels, humid, temp, somo) {
             const ctx = document.getElementById(`chart${chartId}`).getContext("2d");
@@ -123,6 +164,8 @@
         window.togglePump = togglePump;
         window.setFlow = setFlow;
 
+        // Gọi hàm để lấy dữ liệu ban đầu và lắng nghe dữ liệu thời gian thực
+        fetchInitialValues();
         fetchDataRealtime();
     </script>
 </body>
